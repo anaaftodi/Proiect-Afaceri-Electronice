@@ -360,3 +360,48 @@ button,
   color: #10b981;
 }
 
+.nav-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.nav-dropbtn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.nav-dropdown-content {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  background: white;
+  min-width: 160px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 10;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.nav-dropdown-content button {
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  border: none;
+  background: white;
+  cursor: pointer;
+}
+
+.nav-dropdown-content button:hover {
+  background: #f3f4f6;
+}
+
+.admin-badge {
+  margin-left: 10px;
+  padding: 3px 8px;
+  background: #f59e0b;
+  border-radius: 10px;
+  font-size: 12px;
+}

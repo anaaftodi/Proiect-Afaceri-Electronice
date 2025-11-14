@@ -26,26 +26,52 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          <Route path="/products" element={
-            <PrivateRoute><ProductsPage /></PrivateRoute>
-          } />
+          <Route
+            path="/products"
+            element={
+              <PrivateRoute>
+                <ProductsPage />
+              </PrivateRoute>
+            }
+          />
 
-          <Route path="/categories" element={
-            <PrivateRoute><CategoriesPage /></PrivateRoute>
-          } />
+          <Route
+            path="/categories"
+            element={
+              <PrivateRoute>
+                <CategoriesPage />
+              </PrivateRoute>
+            }
+          />
 
-          <Route path="/favorites" element={
-            <PrivateRoute><FavoritesPage /></PrivateRoute>
-          } />
+          <Route
+            path="/favorites"
+            element={
+              <PrivateRoute>
+                <FavoritesPage />
+              </PrivateRoute>
+            }
+          />
 
-          <Route path="/cart" element={
-            <PrivateRoute><CartPage /></PrivateRoute>
-          } />
+          <Route
+            path="/cart"
+            element={
+              <PrivateRoute>
+                <CartPage />
+              </PrivateRoute>
+            }
+          />
 
-          <Route path="/orders" element={
-            <PrivateRoute><OrdersPage /></PrivateRoute>
-          } />
+          <Route
+            path="/orders"
+            element={
+              <PrivateRoute>
+                <OrdersPage />
+              </PrivateRoute>
+            }
+          />
 
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
     </>

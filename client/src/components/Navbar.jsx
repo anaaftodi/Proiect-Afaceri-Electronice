@@ -5,6 +5,11 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const isAdmin =
+    !!user &&
+    user.role &&
+    user.role.toString().toUpperCase() === "ADMIN";
+
   function handleLogout() {
     logout();
     navigate("/login");
@@ -19,10 +24,15 @@ export default function Navbar() {
 
         <nav className="nav-links">
           <Link to="/products">Produse</Link>
-          <Link to="/categories">Categorii</Link>
+
+          {/* Link 'Categorii produse' – vizibil doar pentru ADMIN */}
+          {isAdmin && <Link to="/categories">Categorii produse</Link>}
+
           <Link to="/favorites">Favorite</Link>
           <Link to="/cart">Coș</Link>
-          <Link to="/orders">Comenzile mele</Link>
+
+          {/* Comenzile mele – doar dacă e logat */}
+          {user && <Link to="/orders">Comenzile mele</Link>}
         </nav>
 
         <div className="nav-auth">

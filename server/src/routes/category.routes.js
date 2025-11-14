@@ -1,76 +1,112 @@
 const express = require("express");
 const prisma = require("../prisma");
 const auth = require("../utils/authMiddleware");
+const requireAdmin = require("../utils/adminMiddleware");
 
 const router = express.Router();
 
-// CREATE
-router.post("/", auth, async (req, res) => {
-  const { name } = req.body;
-
-  try {
-    const category = await prisma.category.create({
-      data: { name },
-    });
-    res.json(category);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error creating category" });
-  }
-});
-
-// READ ALL
+/**
+ * GET /api/categories
+ * Public – toate categoriile
+ */
 router.get("/", async (req, res) => {
   try {
-    const categories = await prisma.category.findMany({
-      include: { products: true },
-    });
+    const categories = await prisma.category.findMany();
     res.json(categories);
   } catch (err) {
+    console.error("Error fetching categories", err);
     res.status(500).json({ message: "Error fetching categories" });
   }
 });
 
-// READ ONE
-router.get("/:id", async (req, res) => {
-  const id = Number(req.params.id);
-
+/**
+ * POST /api/categories
+ * Doar ADMIN – creează o categorie nouă
+ */
+router.post("/", auth, requireAdmin, async (req, res) => {
   try {
-    const category = await prisma.category.findUnique({
-      where: { id },
-      include: { products: true },
-    });
-    if (!category) return res.status(404).json({ message: "Not found" });
+    const { name } = req.body;
 
-    res.json(category);
-  } catch {
-    res.status(500).json({ message: "Error fetching category" });
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
+    // dacă name e @unique în Prisma și există deja, Prisma va arunca P2002
+    const category = await prisma.category.create({
+      data: { name: name.trim() },
+    });
+
+    return res.status(201).json(category);
+  } catch (err) {
+    console.error("Error creating category", err);
+
+    // eroare de tip "unique constraint failed"
+    if (err.code === "P2002") {
+      return res
+        .status(400)
+        .json({ message: "Această categorie există deja." });
+    }
+
+    return res.status(500).json({ message: "Error creating category" });
   }
 });
 
-// UPDATE
-router.put("/:id", auth, async (req, res) => {
-  const id = Number(req.params.id);
-  const { name } = req.body;
-
+/**
+ * PUT /api/categories/:id
+ * Doar ADMIN – actualizează o categorie
+ */
+router.put("/:id", auth, requireAdmin, async (req, res) => {
   try {
+    const id = Number(req.params.id);
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Category name is required" });
+    }
+
     const category = await prisma.category.update({
       where: { id },
-      data: { name },
+      data: { name: name.trim() },
     });
+
     res.json(category);
-  } catch {
+  } catch (err) {
+    console.error("Error updating category", err);
+
+    if (err.code === "P2025") {
+      // record not found
+      return res.status(404).json({ message: "Category not found" });
+    }
+    if (err.code === "P2002") {
+      return res
+        .status(400)
+        .json({ message: "Această categorie există deja." });
+    }
+
     res.status(500).json({ message: "Error updating category" });
   }
 });
 
-// DELETE
-router.delete("/:id", auth, async (req, res) => {
-  const id = Number(req.params.id);
+/**
+ * DELETE /api/categories/:id
+ * Doar ADMIN – șterge o categorie
+ */
+router.delete("/:id", auth, requireAdmin, async (req, res) => {
   try {
-    await prisma.category.delete({ where: { id } });
+    const id = Number(req.params.id);
+
+    await prisma.category.delete({
+      where: { id },
+    });
+
     res.json({ message: "Category deleted" });
-  } catch {
+  } catch (err) {
+    console.error("Error deleting category", err);
+
+    if (err.code === "P2025") {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
     res.status(500).json({ message: "Error deleting category" });
   }
 });

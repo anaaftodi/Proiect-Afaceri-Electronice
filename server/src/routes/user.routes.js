@@ -1,44 +1,92 @@
 const express = require("express");
 const prisma = require("../prisma");
 const auth = require("../utils/authMiddleware");
+const requireAdmin = require("../utils/adminMiddleware");
 
 const router = express.Router();
 
-// GET all users 
-router.get("/", auth, async (req, res) => {
-  const users = await prisma.user.findMany({
-    select: { id: true, email: true, name: true, createdAt: true },
-  });
-  res.json(users);
+/**
+ * GET /api/users/me
+ * Profilul userului curent (logat)
+ */
+router.get("/me", auth, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: { orders: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const ordersCount = user.orders.length;
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      address: user.address,
+      ordersCount,
+      createdAt: user.createdAt,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching profile" });
+  }
 });
 
-// GET user by ID
-router.get("/:id", auth, async (req, res) => {
-  const id = Number(req.params.id);
-  const user = await prisma.user.findUnique({ where: { id } });
+/**
+ * PUT /api/users/me
+ * Actualizare profil (nume + adresă)
+ */
+router.put("/me", auth, async (req, res) => {
+  try {
+    const { name, address } = req.body;
 
-  if (!user) return res.status(404).json({ message: "User not found" });
-  res.json(user);
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        name,
+        address,
+      },
+    });
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      address: user.address,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error updating profile" });
+  }
 });
 
-// UPDATE user
-router.put("/:id", auth, async (req, res) => {
-  const id = Number(req.params.id);
-  const { name } = req.body;
+/**
+ * GET /api/users
+ * Doar ADMIN – listă de useri (opțional pentru panou admin)
+ */
+router.get("/", auth, requireAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+    });
 
-  const user = await prisma.user.update({
-    where: { id },
-    data: { name },
-  });
-
-  res.json(user);
-});
-
-// DELETE user
-router.delete("/:id", auth, async (req, res) => {
-  const id = Number(req.params.id);
-  await prisma.user.delete({ where: { id } });
-  res.json({ message: "User deleted" });
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching users" });
+  }
 });
 
 module.exports = router;
