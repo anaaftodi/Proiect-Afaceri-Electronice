@@ -1,118 +1,187 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axiosClient";
 
 export default function CartPage() {
-  const [items, setItems] = useState([]);
-  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [cart, setCart] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [address, setAddress] = useState("");
+  const [payment, setPayment] = useState("Card");
+  const [error, setError] = useState("");
+
+  const navigate = useNavigate();
 
   async function loadCart() {
-    const res = await api.get("/cart");
-    setItems(res.data);
+    try {
+      setLoading(true);
+      const res = await api.get("/cart");
+      setCart(res.data);
+    } catch (err) {
+      console.error("Error loading cart", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     loadCart();
   }, []);
 
-  const total = items.reduce(
-    (sum, it) => sum + it.quantity * it.product.price,
-    0
-  );
-
-  async function updateQuantity(id, quantity) {
-    await api.put(`/cart/${id}`, { quantity });
-    loadCart();
-  }
-
-  async function removeItem(id) {
-    await api.delete(`/cart/${id}`);
-    loadCart();
-  }
-
-  async function clearCart() {
-    await api.delete("/cart");
-    loadCart();
-  }
-
-  async function createOrder() {
-    if (!items.length) return;
-    setCreatingOrder(true);
+  async function handleDelete(id) {
     try {
-      const payload = {
-        items: items.map((it) => ({
-          productId: it.productId,
-          quantity: it.quantity,
-          price: it.product.price,
-        })),
-      };
-      await api.post("/orders", payload);
-      await clearCart();
-      alert("Comandă creată!");
+      await api.delete(`/cart/${id}`);
+      loadCart();
     } catch (err) {
-      console.error(err);
-      alert("Eroare la creare comandă");
-    } finally {
-      setCreatingOrder(false);
+      console.error("Error deleting", err);
     }
   }
+
+  async function handleQuantityChange(id, qty) {
+    if (qty < 1) return;
+    try {
+      await api.put(`/cart/${id}`, { quantity: qty });
+      loadCart();
+    } catch (err) {
+      console.error("Error updating quantity", err);
+    }
+  }
+
+  async function finalizeOrder() {
+    if (!address.trim()) {
+      setError("Completează adresa de livrare.");
+      return;
+    }
+
+    setError("");
+
+    try {
+      await api.post("/orders", {
+        address,
+        paymentMethod: payment,
+      });
+
+      navigate("/orders");
+    } catch (err) {
+      console.error("Error creating order", err);
+      setError("A apărut o eroare. Reîncearcă.");
+    }
+  }
+
+  const total = cart.reduce(
+    (sum, item) => sum + item.quantity * item.product.price,
+    0
+  );
 
   return (
     <div>
       <h2>Coșul meu</h2>
-      {items.length === 0 && <p>Coșul este gol.</p>}
 
-      <ul className="list">
-        {items.map((it) => (
-          <li key={it.id} className="list-item">
-            <div>
-              <strong>{it.product.name}</strong> – {it.product.price} lei
-              <div className="muted">Cantitate: {it.quantity}</div>
+      {loading && <p>Se încarcă...</p>}
+
+      {!loading && cart.length === 0 && <p>Coșul este gol.</p>}
+
+      <ul className="cart-list">
+        {cart.map((item) => (
+          <li key={item.id} className="cart-row">
+            <img
+              src={item.product.imageUrl}
+              alt={item.product.name}
+              className="cart-thumb"
+            />
+            <div className="cart-main">
+              <strong>{item.product.name}</strong>
+              <p className="muted">{item.product.description}</p>
+              <p>Preț: {item.product.price} lei</p>
+
+              <div className="qty-controls">
+                <button onClick={() => handleQuantityChange(item.id, item.quantity - 1)}>-</button>
+                <span>{item.quantity}</span>
+                <button onClick={() => handleQuantityChange(item.id, item.quantity + 1)}>+</button>
+
+                <button className="btn-danger" onClick={() => handleDelete(item.id)}>
+                  Elimină
+                </button>
+              </div>
             </div>
-            <div className="list-actions">
-              <button
-                className="btn-outline"
-                onClick={() => updateQuantity(it.id, it.quantity + 1)}
-              >
-                +
-              </button>
-              <button
-                className="btn-outline"
-                disabled={it.quantity <= 1}
-                onClick={() => updateQuantity(it.id, it.quantity - 1)}
-              >
-                -
-              </button>
-              <button
-                className="btn-danger"
-                onClick={() => removeItem(it.id)}
-              >
-                Șterge
-              </button>
+
+            <div className="cart-line-total">
+              {item.product.price * item.quantity} lei
             </div>
           </li>
         ))}
       </ul>
 
-      {items.length > 0 && (
-        <div style={{ marginTop: "1rem" }}>
-          <p>
-            <strong>Total: {total} lei</strong>
-          </p>
-          <button
-            className="btn-primary"
-            disabled={creatingOrder}
-            onClick={createOrder}
+      {cart.length > 0 && (
+        <>
+          <h3 className="cart-total-line">Total: {total} lei</h3>
+
+          {/* FORMULAR CHECKOUT */}
+          <div
+            style={{
+              marginTop: "25px",
+              padding: "20px",
+              border: "1px solid #ddd",
+              borderRadius: "8px",
+              maxWidth: "400px",
+            }}
           >
-            Finalizează comanda
-          </button>
-          <button
-            className="btn-outline"
-            style={{ marginLeft: "0.5rem" }}
-            onClick={clearCart}
-          >
-            Golește coșul
-          </button>
-        </div>
+            <h3>Finalizare comandă</h3>
+
+            {error && (
+              <div
+                style={{
+                  background: "#ffdddd",
+                  color: "#a00",
+                  padding: "8px",
+                  marginBottom: "10px",
+                  borderRadius: "4px",
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <label>Adresă de livrare:</label>
+            <input
+              type="text"
+              placeholder="Ex: Str. Exemplu nr. 10, București"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                marginBottom: "12px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+              }}
+            />
+
+            <label>Metodă de plată:</label>
+            <select
+              value={payment}
+              onChange={(e) => setPayment(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px",
+                marginBottom: "20px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+              }}
+            >
+              <option value="Card">Card</option>
+              <option value="Ramburs">Ramburs</option>
+            </select>
+
+            <button
+              className="btn-primary"
+              onClick={finalizeOrder}
+              style={{ width: "100%", padding: "10px 0" }}
+            >
+              Plasează comanda
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

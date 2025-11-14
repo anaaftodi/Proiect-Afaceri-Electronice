@@ -1,28 +1,22 @@
 import { useEffect, useState } from "react";
 import api from "../api/axiosClient";
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleString("ro-RO", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   async function loadOrders() {
     try {
-      const res = await api.get("/orders/me");
+      setLoading(true);
+      setError("");
+      const res = await api.get("/orders");
       setOrders(res.data);
     } catch (err) {
-      console.error(err);
-      alert("Eroare la încărcarea comenzilor");
+      console.error("Error loading orders", err);
+      setError(
+        err.response?.data?.message || "Nu s-au putut încărca comenzile."
+      );
     } finally {
       setLoading(false);
     }
@@ -32,62 +26,63 @@ export default function OrdersPage() {
     loadOrders();
   }, []);
 
-  if (loading) {
-    return <p>Se încarcă comenzile...</p>;
-  }
-
   return (
     <div>
       <h2>Comenzile mele</h2>
       <p className="muted">
-        Aici vezi comenzile plasate cu contul tău – total, data și produsele
-        comandate.
+        Aici poți vedea comenzile pe care le-ai plasat în magazin.
       </p>
 
-      {orders.length === 0 && <p>Nu ai comenzi încă.</p>}
+      {loading && <p>Se încarcă...</p>}
+      {error && <div className="error">{error}</div>}
 
-      <div className="orders-grid">
+      {!loading && !error && orders.length === 0 && (
+        <p>Nu ai nicio comandă încă.</p>
+      )}
+
+      <div className="orders-list">
         {orders.map((order) => (
-          <div key={order.id} className="order-card">
-            <div className="order-header">
-              <span className="order-id">Comandă #{order.id}</span>
-              <span className="order-date">
-                Plasată la: {formatDate(order.createdAt)}
-              </span>
-            </div>
-
-            <div className="order-body">
-              <p>
-                <strong>Total:</strong>{" "}
-                <span className="order-total">{order.total} lei</span>
-              </p>
+          <div key={order.id} className="card">
+            <div className="card-body">
+              <h3>Comanda #{order.id}</h3>
               <p className="muted">
-                {order.items.length} produse în comandă
+                Plasată la:{" "}
+                {new Date(order.createdAt).toLocaleString("ro-RO")}
+              </p>
+              <p>
+                <strong>Status:</strong> {order.status}
+              </p>
+              {order.address && (
+                <p>
+                  <strong>Adresă livrare:</strong> {order.address}
+                </p>
+              )}
+              {order.paymentMethod && (
+                <p>
+                  <strong>Metodă de plată:</strong> {order.paymentMethod}
+                </p>
+              )}
+              <p>
+                <strong>Total:</strong> {order.total} lei
               </p>
 
-              <div className="order-items">
-                {order.items.map((item) => (
-                  <div key={item.id} className="order-item-row">
-                    <div>
-                      <span className="order-item-name">
-                        Produs #{item.productId}
-                      </span>
-                      <span className="order-item-qty">
-                        x {item.quantity} buc
-                      </span>
-                    </div>
-                    <div className="order-item-price">
-                      {item.price} lei / buc
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="order-footer">
-              <span className="order-status">
-                Status: <strong>Confirmată</strong>
-              </span>
+              {order.items && order.items.length > 0 && (
+                <>
+                  <h4 style={{ marginTop: "10px" }}>Produse</h4>
+                  <ul className="list">
+                    {order.items.map((item) => (
+                      <li key={item.id} className="list-item">
+                        <span>
+                          {item.product?.name || "Produs"} x {item.quantity}
+                        </span>
+                        <span>
+                          {item.price * item.quantity} lei
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
           </div>
         ))}

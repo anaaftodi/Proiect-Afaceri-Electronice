@@ -48,42 +48,35 @@ model Product {
 }
 
 model Order {
-  id        Int         @id @default(autoincrement())
-  userId    Int
-  createdAt DateTime    @default(now())
-  total     Float
+  id            Int         @id @default(autoincrement())
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int
+  total         Float
+  status        String      @default("PLACED")
+  address       String?     // adresa de livrare (poate fi null)
+  paymentMethod String?     // ex: "Card", "Ramburs"
+  createdAt     DateTime    @default(now())
 
-  shippingName    String
-  shippingAddress String
-  city            String
-  phone           String
-  paymentMethod   String       
-  paymentStatus   String       @default("PENDING")
-  transactionId   String?      
-
-  user      User        @relation(fields: [userId], references: [id])
-  items     OrderItem[]
+  items         OrderItem[]
 }
 
 model OrderItem {
   id        Int     @id @default(autoincrement())
+  order     Order   @relation(fields: [orderId], references: [id])
   orderId   Int
+  product   Product @relation(fields: [productId], references: [id])
   productId Int
   quantity  Int
-  price     Float
-
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  price     Float   // prețul produsului la momentul comenzii
 }
 
 model CartItem {
   id        Int     @id @default(autoincrement())
-  userId    Int
-  productId Int
-  quantity  Int     @default(1)
-
   user      User    @relation(fields: [userId], references: [id])
+  userId    Int
   product   Product @relation(fields: [productId], references: [id])
+  productId Int
+  quantity  Int
 }
 
 model Favorite {
