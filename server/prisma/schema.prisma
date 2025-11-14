@@ -16,6 +16,8 @@ model User {
   updatedAt DateTime @updatedAt
 
   orders    Order[]
+  cartItems CartItem[]
+  favorites Favorite[]
 }
 
 model Category {
@@ -34,6 +36,8 @@ model Product {
   category    Category @relation(fields: [categoryId], references: [id])
 
   orderItems  OrderItem[]
+  cartItems CartItem[]
+  favorites Favorite[]
 }
 
 model Order {
@@ -56,3 +60,23 @@ model OrderItem {
   order     Order   @relation(fields: [orderId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
 }
+
+model CartItem {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  productId Int
+  quantity  Int     @default(1)
+
+  user      User    @relation(fields: [userId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Favorite {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  productId Int
+
+  user      User    @relation(fields: [userId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
