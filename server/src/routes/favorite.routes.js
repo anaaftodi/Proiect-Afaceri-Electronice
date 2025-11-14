@@ -63,7 +63,7 @@ router.delete("/:id", auth, async (req, res) => {
   }
 });
 
-// DELETE - șterge favorite după productId (util pentru frontend)
+// DELETE - șterge favorite după productId 
 router.delete("/product/:productId", auth, async (req, res) => {
   try {
     const productId = Number(req.params.productId);
